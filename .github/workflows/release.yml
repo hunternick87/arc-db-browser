@@ -2,7 +2,7 @@ name: Build & Publish (Release)
 
 on:
   release:
-     types: [created, edited, published]
+    types: [published]
   workflow_dispatch:
 
 permissions:
