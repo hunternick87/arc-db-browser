@@ -45,7 +45,7 @@ function createWindow(): BrowserWindow {
 app.whenReady().then(() => {
   // Set app user model id for windows
   // Keep this in sync with electron-builder.yml appId
-  electronApp.setAppUserModelId('com.electron.app')
+  electronApp.setAppUserModelId('dev.hcws.app.db')
 
   // Default open or close DevTools by F12 in development
   // and ignore CommandOrControl + R in production.
