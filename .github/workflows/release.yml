@@ -2,7 +2,7 @@ name: Build & Publish (Release)
 
 on:
   release:
-    types: [published]
+     types: [created, edited, published]
   workflow_dispatch:
 
 permissions:
@@ -20,6 +20,8 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_OWNER: ${{ github.repository_owner }}
       GH_REPO: ${{ github.event.repository.name }}
+      EP_DRAFT: ${{ github.event.release.draft || false }}
+      EP_PRE_RELEASE: ${{ github.event.release.prerelease || false }}
       CSC_IDENTITY_AUTO_DISCOVERY: false
     steps:
       - name: Checkout
@@ -56,6 +58,8 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_OWNER: ${{ github.repository_owner }}
       GH_REPO: ${{ github.event.repository.name }}
+      EP_DRAFT: ${{ github.event.release.draft || false }}
+      EP_PRE_RELEASE: ${{ github.event.release.prerelease || false }}
       CSC_IDENTITY_AUTO_DISCOVERY: false
     steps:
       - name: Checkout
@@ -92,6 +96,8 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_OWNER: ${{ github.repository_owner }}
       GH_REPO: ${{ github.event.repository.name }}
+      EP_DRAFT: ${{ github.event.release.draft || false }}
+      EP_PRE_RELEASE: ${{ github.event.release.prerelease || false }}
       CSC_IDENTITY_AUTO_DISCOVERY: false
     steps:
       - name: Checkout
