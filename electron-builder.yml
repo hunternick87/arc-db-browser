@@ -40,8 +40,6 @@ appImage:
 npmRebuild: false
 publish:
   provider: github
-  owner: ${env.GH_OWNER}
-  repo: ${env.GH_REPO}
   # GitHub Publisher defaults to draft releases; in our workflow we usually upload to
   # an already-created/published Release tag, so default to 'release'.
   # For draft releases, the workflow sets EP_DRAFT=true.

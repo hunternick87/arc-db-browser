@@ -190,14 +190,16 @@ export function AppSidebar({ onTableSelect, onKeySelect, onOpenMigration }: AppS
                 </SidebarContent>
 
                 <SidebarFooter className="p-4 space-y-2">
-                    <Button
-                        variant="outline"
-                        className="w-full"
-                        onClick={() => setUpdatesDialogOpen(true)}
-                    >
-                        <ArrowUpCircle className="h-4 w-4 mr-2" />
-                        Updates
-                    </Button>
+                    {!activeConnection && (
+                        <Button
+                            variant="outline"
+                            className="w-full"
+                            onClick={() => setUpdatesDialogOpen(true)}
+                        >
+                            <ArrowUpCircle className="h-4 w-4 mr-2" />
+                            Updates
+                        </Button>
+                    )}
                     {/* Schema Migration - Always visible when there are SQL connections */}
                     {connections.some(c => c.type === 'sqlite' || c.type === 'postgres') && (
                         <Button
