@@ -14,6 +14,7 @@ import type {
   SchemaMigrationApplyResponse,
   SchemaMigrationResult,
   SchemaMigrationApplyOptions,
+  SchemaMigrationOptions,
   ToolAvailabilityResponse,
   BackupListResponse,
   BackupEntry,
@@ -220,6 +221,7 @@ type SchemaMigrationPlanRequest = {
   sourceConnectionId: string
   targetConnectionId: string
   tables: string[]
+  options?: SchemaMigrationOptions
 }
 
 async function buildSchemaMigrationPlan(req: SchemaMigrationPlanRequest): Promise<SchemaMigrationResult[]> {
@@ -228,8 +230,10 @@ async function buildSchemaMigrationPlan(req: SchemaMigrationPlanRequest): Promis
 
   const targetType: 'sqlite' | 'postgres' = target instanceof PostgresDriver ? 'postgres' : 'sqlite'
 
-  const sourceTables = new Set((await source.getTables()).map((t) => t.name))
-  const targetTables = new Set((await target.getTables()).map((t) => t.name))
+  const sourceTableInfos = await source.getTables()
+  const targetTableInfos = await target.getTables()
+  const sourceTables = new Set(sourceTableInfos.map((t) => t.name))
+  const targetTables = new Set(targetTableInfos.map((t) => t.name))
 
   const results: SchemaMigrationResult[] = []
 
@@ -305,6 +309,20 @@ async function buildSchemaMigrationPlan(req: SchemaMigrationPlanRequest): Promis
         sql: stmts.join('\n'),
         message: 'Will add missing columns',
         warnings: warnings.length ? warnings : undefined
+      })
+    }
+  }
+
+  if (req.options?.fullySync) {
+    for (const targetTable of targetTableInfos) {
+      if (targetTable.type !== 'table') continue
+      if (sourceTables.has(targetTable.name)) continue
+      const dropStatement = `DROP TABLE IF EXISTS ${quoteIdent(targetTable.name)};`
+      results.push({
+        table: targetTable.name,
+        success: true,
+        sql: dropStatement,
+        message: 'Will drop target table that no longer exists in the source'
       })
     }
   }
@@ -666,7 +684,7 @@ export function registerDatabaseHandlers(): void {
   // Build schema migration plan (safe: only creates tables and adds missing columns)
   ipcMain.handle(IPC_CHANNELS.SCHEMA_MIGRATION_PLAN, async (
     _event,
-    req: { sourceConnectionId: string; targetConnectionId: string; tables: string[] }
+    req: { sourceConnectionId: string; targetConnectionId: string; tables: string[]; options?: SchemaMigrationOptions }
   ): Promise<SchemaMigrationPlanResponse> => {
     try {
       if (!req?.sourceConnectionId || !req?.targetConnectionId) {
@@ -679,7 +697,8 @@ export function registerDatabaseHandlers(): void {
       const results = await buildSchemaMigrationPlan({
         sourceConnectionId: req.sourceConnectionId,
         targetConnectionId: req.targetConnectionId,
-        tables: req.tables
+        tables: req.tables,
+        options: req.options
       })
 
       return { success: true, results }
@@ -711,7 +730,8 @@ export function registerDatabaseHandlers(): void {
         const plan = await buildSchemaMigrationPlan({
           sourceConnectionId: req.sourceConnectionId,
           targetConnectionId: req.targetConnectionId,
-          tables: req.tables
+          tables: req.tables,
+          options: req.options
         })
 
         const actionable = plan.filter((r) => r.success && r.sql && r.sql.trim() && r.sql !== '-- No changes needed')

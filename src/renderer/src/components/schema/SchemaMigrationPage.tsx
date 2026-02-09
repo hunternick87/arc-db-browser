@@ -114,6 +114,7 @@ export function SchemaMigrationPage({ onBack }: SchemaMigrationPageProps): React
     const [showConfirmDialog, setShowConfirmDialog] = useState(false)
     const [confirmText, setConfirmText] = useState('')
     const [createBackup, setCreateBackup] = useState(false)
+    const [fullySync, setFullySync] = useState(false)
     const [lastBackupPath, setLastBackupPath] = useState<string | null>(null)
     const [pgDumpAvailable, setPgDumpAvailable] = useState<boolean | null>(null)
     const [isRestoringBackup, setIsRestoringBackup] = useState(false)
@@ -128,15 +129,19 @@ export function SchemaMigrationPage({ onBack }: SchemaMigrationPageProps): React
         [sqlConnections, targetId]
     )
 
+    const extraTargetTables = useMemo(() => {
+        const sourceSet = new Set(sourceSchemas.map(schema => schema.name))
+        return targetSchemas.filter(table => !sourceSet.has(table.name))
+    }, [sourceSchemas, targetSchemas])
+
     const CONFIRM_PHRASE = 'yes i am totally sure'
 
     useEffect(() => {
-        // Sensible defaults: SQLite backups are cheap; Postgres backups require pg_dump.
-        if (!targetConnection) return
-        setCreateBackup(targetConnection.type === 'sqlite')
+        setCreateBackup(targetConnection?.type === 'sqlite')
         setLastBackupPath(null)
         setPgDumpAvailable(null)
-    }, [targetConnection?.id])
+        setFullySync(false)
+    }, [targetConnection?.id, targetConnection?.type])
 
     useEffect(() => {
         if (!targetConnection || targetConnection.type !== 'postgres') return
@@ -301,6 +306,14 @@ export function SchemaMigrationPage({ onBack }: SchemaMigrationPageProps): React
         setIsLoadingDiff(false)
     }, [sourceStatus, targetStatus, selectedTables, sourceSchemas, targetSchemas])
 
+    const handleFullySyncToggle = useCallback((value?: boolean) => {
+        const next = typeof value === 'boolean' ? value : !fullySync
+        setFullySync(next)
+        setSchemaDiffs([])
+        setDryRunResults([])
+        setMigrationResults([])
+    }, [fullySync])
+
     // Dry run
     const handleDryRun = useCallback(async () => {
         if (!targetConnection || !sourceId || !targetId) return
@@ -326,7 +339,8 @@ export function SchemaMigrationPage({ onBack }: SchemaMigrationPageProps): React
             const res = await planFn({
                 sourceConnectionId: sourceId,
                 targetConnectionId: targetId,
-                tables: Array.from(selectedTables)
+                tables: Array.from(selectedTables),
+                options: { fullySync }
             })
 
             if (!res.success) {
@@ -359,7 +373,7 @@ export function SchemaMigrationPage({ onBack }: SchemaMigrationPageProps): React
         } finally {
             setIsDryRun(false)
         }
-    }, [targetConnection, sourceId, targetId, selectedTables])
+    }, [targetConnection, sourceId, targetId, selectedTables, fullySync])
 
     // Actual migration
     const handleMigrate = useCallback(async () => {
@@ -389,7 +403,7 @@ export function SchemaMigrationPage({ onBack }: SchemaMigrationPageProps): React
                 sourceConnectionId: sourceId,
                 targetConnectionId: targetId,
                 tables: Array.from(selectedTables),
-                options: { createBackup }
+                options: { createBackup, fullySync }
             })
 
             if (!res.success) {
@@ -423,7 +437,7 @@ export function SchemaMigrationPage({ onBack }: SchemaMigrationPageProps): React
         } finally {
             setIsMigrating(false)
         }
-    }, [targetConnection, sourceId, targetId, selectedTables, createBackup])
+    }, [targetConnection, sourceId, targetId, selectedTables, createBackup, fullySync])
 
     const handleTableToggle = (tableName: string) => {
         setSelectedTables(prev => {
@@ -452,7 +466,9 @@ export function SchemaMigrationPage({ onBack }: SchemaMigrationPageProps): React
     }
 
     const canGenerateDiff = sourceStatus === 'connected' && targetStatus === 'connected' && selectedTables.size > 0
-    const canDryRun = schemaDiffs.length > 0 && schemaDiffs.some(d => d.action !== 'skip')
+    const hasSchemaChanges = schemaDiffs.length > 0 && schemaDiffs.some(d => d.action !== 'skip')
+    const readyForFullySync = fullySync && extraTargetTables.length > 0 && sourceStatus === 'connected' && targetStatus === 'connected'
+    const canDryRun = hasSchemaChanges || readyForFullySync
     const canMigrate = dryRunResults.length > 0 && dryRunResults.some(r => r.sql && r.sql !== '-- No changes needed')
 
     const changesCount = schemaDiffs.filter(d => d.action !== 'skip').length
@@ -520,7 +536,42 @@ export function SchemaMigrationPage({ onBack }: SchemaMigrationPageProps): React
                                                     {skipCount} table(s) identical
                                                 </Badge>
                                             )}
+                                            {extraTargetTables.length > 0 && (
+                                                <Badge variant="destructive" className="text-xs">
+                                                    {extraTargetTables.length} extra table(s) on target
+                                                </Badge>
+                                            )}
                                         </div>
+
+                                        <div className="h-px bg-transparent py-2" />
+
+                                        {extraTargetTables.length > 0 && sourceStatus === 'connected' && targetStatus === 'connected' && (
+                                            <div className="space-y-3 p-4 rounded-lg border border-destructive/50 bg-destructive/10 text-destructive">
+                                                <div className="flex items-center gap-2 text-sm font-medium">
+                                                    <AlertTriangle className="h-4 w-4" />
+                                                    <span>Target-only tables detected</span>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">
+                                                    These tables exist in <strong>{targetConnection?.name}</strong> but no longer exist in the source schema.
+                                                    Enable <span className="font-medium">Fully sync schema</span> in the sidebar to drop them safely.
+                                                </p>
+                                                <div className="h-px bg-transparent py-2" />
+                                                <div className="space-y-1 gap-2 flex flex-col">
+                                                    {extraTargetTables.map(table => (
+                                                        <div
+                                                            key={table.name}
+                                                            className="flex items-center gap-2 px-3 py-2 rounded border border-destructive/60 bg-destructive/5 text-destructive text-xs"
+                                                        >
+                                                            <Table2 className="h-3.5 w-3.5" />
+                                                            <span className="truncate">{table.name}</span>
+                                                            <Badge variant="destructive" className="text-[10px] ml-auto uppercase text-gray-400">
+                                                                Target only
+                                                            </Badge>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
 
                                         <div className="h-px bg-transparent py-2" />
 
@@ -771,20 +822,22 @@ export function SchemaMigrationPage({ onBack }: SchemaMigrationPageProps): React
                                                     </div>
                                                 </SelectTrigger>
                                             <SelectContent>
-                                                    {sqlConnections.map(conn => (
-                                                        <SelectItem
-                                                            key={conn.id}
-                                                            value={conn.id}
-                                                            disabled={conn.id === targetId}
-                                                        >
-                                                            <span className="min-w-0 flex items-center gap-2">
-                                                                <span className="truncate flex-1 min-w-0">{conn.name}</span>
-                                                                <Badge variant="outline" className="text-xs">
-                                                                    {conn.type}
-                                                                </Badge>
-                                                            </span>
-                                                        </SelectItem>
-                                                    ))}
+                                                    {sqlConnections.map(conn => {
+                                                        return (
+                                                            <SelectItem
+                                                                key={conn.id}
+                                                                value={conn.id}
+                                                                disabled={conn.id === targetId}
+                                                            >
+                                                                <span className="min-w-0 flex items-center gap-2">
+                                                                    <span className="truncate flex-1 min-w-0">{conn.name}</span>
+                                                                    <Badge variant="outline" className="text-xs">
+                                                                        {conn.type}
+                                                                    </Badge>
+                                                                </span>
+                                                            </SelectItem>
+                                                        )
+                                                    })}
                                             </SelectContent>
                                         </Select>
                                         <Button
@@ -928,6 +981,26 @@ export function SchemaMigrationPage({ onBack }: SchemaMigrationPageProps): React
                                                         : pgDumpAvailable === false
                                                             ? 'pg_dump was not found on PATH; backups are disabled.'
                                                             : 'Creates a SQL dump using pg_dump (must be installed and on PATH).'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div
+                                            className={`flex items-start gap-2 p-3 rounded-md border ${fullySync
+                                                ? 'bg-destructive/10 border-destructive/50 cursor-pointer'
+                                                : 'bg-background cursor-pointer'
+                                            }`}
+                                            onClick={() => handleFullySyncToggle()}
+                                        >
+                                            <Checkbox
+                                                checked={fullySync}
+                                                onCheckedChange={(value) => handleFullySyncToggle(Boolean(value))}
+                                                onClick={(event) => event.stopPropagation()}
+                                                className="h-4 w-4 mt-0.5"
+                                            />
+                                            <div className="min-w-0">
+                                                <div className="text-sm font-medium">Fully sync schema</div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    Drop tables on the target that are missing from the source schema. Use with caution.
                                                 </div>
                                             </div>
                                         </div>

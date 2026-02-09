@@ -201,7 +201,7 @@ export function AppSidebar({ onTableSelect, onKeySelect, onOpenMigration }: AppS
                         </Button>
                     )}
                     {/* Schema Migration - Always visible when there are SQL connections */}
-                    {connections.some(c => c.type === 'sqlite' || c.type === 'postgres') && (
+                    {!activeConnection && connections.some(c => c.type === 'sqlite' || c.type === 'postgres') && (
                         <Button
                             variant="outline"
                             className="w-full"

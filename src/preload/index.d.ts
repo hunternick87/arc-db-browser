@@ -8,6 +8,7 @@ import type {
   SchemaMigrationPlanResponse,
   SchemaMigrationApplyResponse,
   SchemaMigrationApplyOptions,
+  SchemaMigrationOptions,
   ToolAvailabilityResponse,
   BackupListResponse,
   RestoreSqliteBackupResponse
@@ -66,6 +67,7 @@ interface DatabaseAPI {
     sourceConnectionId: string
     targetConnectionId: string
     tables: string[]
+    options?: SchemaMigrationOptions
   }) => Promise<SchemaMigrationPlanResponse>
 
   schemaMigrationApply: (req: {

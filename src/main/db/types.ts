@@ -74,7 +74,11 @@ export interface SchemaMigrationPlanResponse {
   error?: string
 }
 
-export interface SchemaMigrationApplyOptions {
+export interface SchemaMigrationOptions {
+  fullySync?: boolean
+}
+
+export interface SchemaMigrationApplyOptions extends SchemaMigrationOptions {
   createBackup?: boolean
 }
 

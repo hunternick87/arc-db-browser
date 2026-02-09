@@ -163,6 +163,26 @@ export function DataTableView({ selectedTable }: DataTableViewProps): React.JSX.
     const [pageIndex, setPageIndex] = useState(0)
     const [pageSize, setPageSize] = useState(50)
 
+    // If the user changes the db connect as they are in a table, reset state
+    useEffect(() => {
+        setData([])
+        setColumnSchema([])
+        setColumns([])
+        setIsLoading(false)
+        setError(null)
+        setTotalRows(0)
+        setExecutionTime(null)
+        setNewRowValues({})
+        setIsInserting(false)
+        setSorting([])
+        setColumnFilters([])
+        setColumnVisibility({})
+        setGlobalFilter('')
+        setRowSelection({})
+        setPageIndex(0)
+        setPageSize(50)
+    }, [activeConnection, selectedTable])
+
     // Refresh function
     const refreshData = useCallback(async () => {
         if (!selectedTable || !activeConnection) return
@@ -460,7 +480,7 @@ export function DataTableView({ selectedTable }: DataTableViewProps): React.JSX.
     }
 
     return (
-        <div className="flex flex-col h-full w-full overflow-hidden">
+        <div className="flex flex-col h-full w-full">
             {/* Toolbar */}
             <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
                 <div className="flex items-center gap-4">
@@ -517,8 +537,8 @@ export function DataTableView({ selectedTable }: DataTableViewProps): React.JSX.
 
             {/* Error display */}
             {error && (
-                <div className="px-4 py-2 bg-destructive/10 text-destructive text-sm">
-                    {error}
+                <div className="px-4 py-2 bg-destructive/10 text-destructive text-sm flex items-center justify-between">
+                    {error.charAt(0).toUpperCase() + error.slice(1)}
                     <Button
                         variant="ghost"
                         size="sm"
@@ -531,7 +551,7 @@ export function DataTableView({ selectedTable }: DataTableViewProps): React.JSX.
             )}
 
             {/* Table */}
-            <ScrollArea className="flex-1 w-full">
+            <ScrollArea className="flex-1 w-full overflow-auto">
                 {isLoading ? (
                     <div className="p-4 space-y-2">
                         {Array.from({ length: 10 }).map((_, i) => (

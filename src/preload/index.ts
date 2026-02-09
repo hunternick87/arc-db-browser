@@ -9,6 +9,7 @@ import type {
   SchemaMigrationPlanResponse,
   SchemaMigrationApplyResponse,
   SchemaMigrationApplyOptions,
+  SchemaMigrationOptions,
   ToolAvailabilityResponse,
   BackupListResponse,
   RestoreSqliteBackupResponse
@@ -120,6 +121,7 @@ const databaseAPI = {
     sourceConnectionId: string
     targetConnectionId: string
     tables: string[]
+    options?: SchemaMigrationOptions
   }): Promise<SchemaMigrationPlanResponse> => ipcRenderer.invoke('db:schema-migration-plan', req),
 
   schemaMigrationApply: (req: {
