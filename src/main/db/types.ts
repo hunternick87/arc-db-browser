@@ -1,5 +1,5 @@
 // Database connection and query types
-export type DatabaseType = 'sqlite' | 'postgres' | 'valkey'
+export type DatabaseType = 'sqlite' | 'postgres' | 'mssql' | 'valkey'
 
 export interface BaseConnection {
   id: string
@@ -31,7 +31,18 @@ export interface ValkeyConnection extends BaseConnection {
   db?: number
 }
 
-export type DatabaseConnection = SQLiteConnection | PostgresConnection | ValkeyConnection
+export interface MSSQLConnection extends BaseConnection {
+  type: 'mssql'
+  host: string
+  port: number
+  database: string
+  user: string
+  password: string
+  encrypt?: boolean
+  trustServerCertificate?: boolean
+}
+
+export type DatabaseConnection = SQLiteConnection | PostgresConnection | MSSQLConnection | ValkeyConnection
 
 // Query results
 export interface QueryColumn {

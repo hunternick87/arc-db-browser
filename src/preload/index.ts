@@ -152,6 +152,13 @@ const updaterAPI = {
   }
 }
 
+const windowControlsAPI = {
+  minimize: (): Promise<void> => ipcRenderer.invoke('window:minimize'),
+  toggleMaximize: (): Promise<boolean> => ipcRenderer.invoke('window:toggle-maximize'),
+  isMaximized: (): Promise<boolean> => ipcRenderer.invoke('window:is-maximized'),
+  close: (): Promise<void> => ipcRenderer.invoke('window:close')
+}
+
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise
 // just add to the DOM global.
@@ -160,6 +167,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('electron', electronAPI)
     contextBridge.exposeInMainWorld('api', databaseAPI)
     contextBridge.exposeInMainWorld('updater', updaterAPI)
+    contextBridge.exposeInMainWorld('windowControls', windowControlsAPI)
   } catch (error) {
     console.error(error)
   }
@@ -170,4 +178,6 @@ if (process.contextIsolated) {
   window.api = databaseAPI
   // @ts-ignore (define in dts)
   window.updater = updaterAPI
+  // @ts-ignore (define in dts)
+  window.windowControls = windowControlsAPI
 }

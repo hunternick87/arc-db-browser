@@ -99,7 +99,7 @@ export function ConnectionProvider({ children }: { children: ReactNode }): React
             }
 
             // Load tables or keys based on connection type
-            if (connection.type === 'sqlite' || connection.type === 'postgres') {
+            if (connection.type === 'sqlite' || connection.type === 'postgres' || connection.type === 'mssql') {
                 const tablesResult = await window.api.getTables(connection.id)
                 if (tablesResult.success) {
                     newState.tables = tablesResult.tables
@@ -134,7 +134,7 @@ export function ConnectionProvider({ children }: { children: ReactNode }): React
     }, [activeConnection])
 
     const refreshTables = useCallback(async () => {
-        if (!activeConnection || (activeConnection.connection.type !== 'sqlite' && activeConnection.connection.type !== 'postgres')) return
+        if (!activeConnection || (activeConnection.connection.type !== 'sqlite' && activeConnection.connection.type !== 'postgres' && activeConnection.connection.type !== 'mssql')) return
 
         setIsLoading(true)
         try {

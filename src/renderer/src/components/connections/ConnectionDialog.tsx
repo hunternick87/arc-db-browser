@@ -45,6 +45,15 @@ export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps):
     const [password, setPassword] = useState('')
     const [ssl, setSsl] = useState(false)
 
+    // MSSQL fields
+    const [mssqlHost, setMssqlHost] = useState('localhost')
+    const [mssqlPort, setMssqlPort] = useState('1433')
+    const [mssqlDatabase, setMssqlDatabase] = useState('')
+    const [mssqlUser, setMssqlUser] = useState('sa')
+    const [mssqlPassword, setMssqlPassword] = useState('')
+    const [mssqlEncrypt, setMssqlEncrypt] = useState(true)
+    const [mssqlTrustServerCertificate, setMssqlTrustServerCertificate] = useState(true)
+
     // Valkey fields
     const [valkeyHost, setValkeyHost] = useState('localhost')
     const [valkeyPort, setValkeyPort] = useState('6379')
@@ -60,6 +69,13 @@ export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps):
         setUser('postgres')
         setPassword('')
         setSsl(false)
+        setMssqlHost('localhost')
+        setMssqlPort('1433')
+        setMssqlDatabase('')
+        setMssqlUser('sa')
+        setMssqlPassword('')
+        setMssqlEncrypt(true)
+        setMssqlTrustServerCertificate(true)
         setValkeyHost('localhost')
         setValkeyPort('6379')
         setValkeyPassword('')
@@ -126,6 +142,22 @@ export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps):
                     }
                     break
 
+                case 'mssql':
+                    if (!mssqlDatabase) throw new Error('Database name is required')
+                    connection = {
+                        id,
+                        name: name || `${mssqlDatabase}@${mssqlHost}`,
+                        type: 'mssql',
+                        host: mssqlHost,
+                        port: parseInt(mssqlPort, 10),
+                        database: mssqlDatabase,
+                        user: mssqlUser,
+                        password: mssqlPassword,
+                        encrypt: mssqlEncrypt,
+                        trustServerCertificate: mssqlTrustServerCertificate
+                    }
+                    break
+
                 default:
                     throw new Error('Invalid database type')
             }
@@ -167,6 +199,7 @@ export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps):
                             <SelectContent>
                                 <SelectItem value="sqlite">SQLite</SelectItem>
                                 <SelectItem value="postgres">PostgreSQL</SelectItem>
+                                <SelectItem value="mssql">MS SQL Server</SelectItem>
                                 <SelectItem value="valkey">Valkey / Redis</SelectItem>
                             </SelectContent>
                         </Select>
@@ -260,6 +293,79 @@ export function ConnectionDialog({ open, onOpenChange }: ConnectionDialogProps):
                                 />
                                 <Label htmlFor="ssl" className="font-normal">
                                     Use SSL
+                                </Label>
+                            </div>
+                        </>
+                    )}
+
+                    {/* MSSQL Fields */}
+                    {type === 'mssql' && (
+                        <>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="mssqlHost">Host</Label>
+                                    <Input
+                                        id="mssqlHost"
+                                        value={mssqlHost}
+                                        onChange={(e) => setMssqlHost(e.target.value)}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="mssqlPort">Port</Label>
+                                    <Input
+                                        id="mssqlPort"
+                                        type="number"
+                                        value={mssqlPort}
+                                        onChange={(e) => setMssqlPort(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="mssqlDatabase">Database</Label>
+                                <Input
+                                    id="mssqlDatabase"
+                                    placeholder="master"
+                                    value={mssqlDatabase}
+                                    onChange={(e) => setMssqlDatabase(e.target.value)}
+                                />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="mssqlUser">Username</Label>
+                                    <Input
+                                        id="mssqlUser"
+                                        value={mssqlUser}
+                                        onChange={(e) => setMssqlUser(e.target.value)}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="mssqlPassword">Password</Label>
+                                    <Input
+                                        id="mssqlPassword"
+                                        type="password"
+                                        value={mssqlPassword}
+                                        onChange={(e) => setMssqlPassword(e.target.value)}
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Checkbox
+                                    id="mssqlEncrypt"
+                                    checked={mssqlEncrypt}
+                                    onCheckedChange={(checked) => setMssqlEncrypt(!!checked)}
+                                />
+                                <Label htmlFor="mssqlEncrypt" className="font-normal">
+                                    Encrypt connection
+                                </Label>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Checkbox
+                                    id="mssqlTrustServerCertificate"
+                                    checked={mssqlTrustServerCertificate}
+                                    onCheckedChange={(checked) => setMssqlTrustServerCertificate(!!checked)}
+                                />
+                                <Label htmlFor="mssqlTrustServerCertificate" className="font-normal">
+                                    Trust server certificate
                                 </Label>
                             </div>
                         </>

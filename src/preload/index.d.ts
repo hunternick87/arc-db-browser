@@ -101,10 +101,18 @@ interface UpdaterAPI {
   onEvent: (listener: (event: UpdaterEvent) => void) => () => void
 }
 
+interface WindowControlsAPI {
+  minimize: () => Promise<void>
+  toggleMaximize: () => Promise<boolean>
+  isMaximized: () => Promise<boolean>
+  close: () => Promise<void>
+}
+
 declare global {
   interface Window {
     electron: ElectronAPI
     api: DatabaseAPI
     updater: UpdaterAPI
+    windowControls: WindowControlsAPI
   }
 }

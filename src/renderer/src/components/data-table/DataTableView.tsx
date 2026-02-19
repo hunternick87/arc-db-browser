@@ -29,8 +29,15 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { useConnection } from '@/contexts/ConnectionContext'
 import type { TableInfo, QueryResult, QueryColumn } from '@/lib/types'
+import CodeMirror from '@uiw/react-codemirror'
+import { json } from '@codemirror/lang-json'
+import { EditorView } from '@codemirror/view'
+import { HighlightStyle, syntaxHighlighting } from '@codemirror/language'
+import { tags } from '@lezer/highlight'
+import { indentationMarkers } from '@replit/codemirror-indentation-markers'
 import {
     ChevronDown,
     ChevronLeft,
@@ -53,15 +60,100 @@ interface DataTableViewProps {
     onTableSelect?: (table: TableInfo) => void
 }
 
+const appCodeMirrorTheme = EditorView.theme({
+    '&': {
+        height: '100%',
+        fontSize: '15px',
+        color: 'var(--foreground)',
+        backgroundColor: 'var(--background)'
+    },
+    '.cm-scroller': {
+        fontFamily: 'var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace',
+        lineHeight: '1.75'
+    },
+    '.cm-content': {
+        caretColor: 'var(--foreground)'
+    },
+    '.cm-gutters': {
+        backgroundColor: 'var(--muted)',
+        color: 'var(--muted-foreground)',
+        borderRight: '1px solid var(--border)'
+    },
+    '.cm-activeLine': {
+        backgroundColor: 'color-mix(in oklch, var(--muted) 70%, transparent)'
+    },
+    '.cm-activeLineGutter': {
+        backgroundColor: 'color-mix(in oklch, var(--muted) 75%, transparent)'
+    },
+    '.cm-cursor, .cm-dropCursor': {
+        borderLeftColor: 'var(--foreground)'
+    },
+    '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
+        backgroundColor: 'color-mix(in oklch, var(--accent) 35%, transparent)'
+    },
+    '.cm-matchingBracket': {
+        backgroundColor: 'color-mix(in oklch, var(--accent) 22%, transparent)',
+        outline: '1px solid color-mix(in oklch, var(--accent) 45%, transparent)'
+    }
+}, { dark: false })
+
+const appCodeMirrorDarkTheme = EditorView.theme({
+    '&': {
+        height: '100%',
+        fontSize: '15px',
+        color: 'var(--foreground)',
+        backgroundColor: 'var(--background)'
+    },
+    '.cm-scroller': {
+        fontFamily: 'var(--font-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, Courier New, monospace',
+        lineHeight: '1.75'
+    },
+    '.cm-content, .cm-line': {
+        color: 'var(--foreground)',
+        caretColor: 'var(--foreground)'
+    },
+    '.cm-gutters': {
+        backgroundColor: 'var(--muted)',
+        color: 'var(--muted-foreground)',
+        borderRight: '1px solid var(--border)'
+    },
+    '.cm-activeLine': {
+        backgroundColor: 'color-mix(in oklch, var(--muted) 70%, transparent)'
+    },
+    '.cm-activeLineGutter': {
+        backgroundColor: 'color-mix(in oklch, var(--muted) 75%, transparent)'
+    },
+    '.cm-cursor, .cm-dropCursor': {
+        borderLeftColor: 'var(--foreground)'
+    },
+    '&.cm-focused .cm-selectionBackground, .cm-selectionBackground, .cm-content ::selection': {
+        backgroundColor: 'color-mix(in oklch, var(--accent) 35%, transparent)'
+    },
+    '.cm-matchingBracket': {
+        backgroundColor: 'color-mix(in oklch, var(--accent) 22%, transparent)',
+        outline: '1px solid color-mix(in oklch, var(--accent) 45%, transparent)'
+    }
+}, { dark: true })
+
+const appSyntaxHighlight = HighlightStyle.define([
+    { tag: [tags.brace, tags.squareBracket, tags.paren], color: 'var(--muted-foreground)' },
+    { tag: [tags.punctuation, tags.separator], color: 'var(--muted-foreground)' },
+    { tag: tags.propertyName, color: 'var(--chart-2, var(--primary))' },
+    { tag: tags.string, color: 'var(--chart-1, var(--accent-foreground))' },
+    { tag: tags.number, color: 'var(--chart-4, var(--primary))' },
+    { tag: [tags.bool, tags.null], color: 'var(--destructive)' },
+    { tag: tags.keyword, color: 'var(--chart-5, var(--primary))' }
+])
+
 // Editable cell component
 function EditableCell({
     value,
     onSave,
-    columnType
+    onJsonClick
 }: {
     value: unknown
     onSave: (newValue: unknown) => void
-    columnType?: string
+    onJsonClick?: (value: unknown) => void
 }) {
     const [isEditing, setIsEditing] = useState(false)
     const [editValue, setEditValue] = useState('')
@@ -69,8 +161,49 @@ function EditableCell({
     const cellRef = useRef<HTMLDivElement>(null)
 
     const handleDoubleClick = () => {
+        // if (isJsonValue) {
+        //     return
+        // }
+        if (isJsonValue && onJsonClick) {
+            onJsonClick(value)
+            return
+        }
         setIsEditing(true)
         setEditValue(value === null || value === undefined ? '' : String(value))
+    }
+
+    const getPrettyJson = (input: unknown): string | null => {
+        if (input === null || input === undefined) {
+            return null
+        }
+
+        if (typeof input === 'object') {
+            try {
+                return JSON.stringify(input, null, 2)
+            } catch {
+                return null
+            }
+        }
+
+        if (typeof input === 'string') {
+            try {
+                const parsed = JSON.parse(input)
+                return JSON.stringify(parsed, null, 2)
+            } catch {
+                return null
+            }
+        }
+
+        return null
+    }
+
+    const prettyJson = getPrettyJson(value)
+    const isJsonValue = prettyJson !== null
+
+    const handleClick = () => {
+        // if (isJsonValue && onJsonClick) {
+        //     onJsonClick(value)
+        // }
     }
 
     useEffect(() => {
@@ -121,8 +254,9 @@ function EditableCell({
     return (
         <div
             ref={cellRef}
+            onClick={handleClick}
             onDoubleClick={handleDoubleClick}
-            className={`${cellClasses} cursor-pointer hover:bg-muted/50 px-1 rounded truncate`}
+            className={`${cellClasses} ${isJsonValue ? 'cursor-pointer hover:bg-muted/50 text-primary/90' : 'cursor-pointer hover:bg-muted/50'} px-1 rounded truncate`}
             title={value === null ? 'null' : value === undefined ? 'undefined' : String(value)}
         >
             {value === null ? (
@@ -158,10 +292,47 @@ export function DataTableView({ selectedTable }: DataTableViewProps): React.JSX.
     const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({})
     const [globalFilter, setGlobalFilter] = useState('')
     const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+    const [jsonDrawerOpen, setJsonDrawerOpen] = useState(false)
+    const [jsonPreview, setJsonPreview] = useState('')
+    const [isDarkMode, setIsDarkMode] = useState(() =>
+        typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
+    )
 
     // Pagination
     const [pageIndex, setPageIndex] = useState(0)
     const [pageSize, setPageSize] = useState(50)
+
+    const openJsonPreview = useCallback((value: unknown) => {
+        try {
+            if (typeof value === 'object' && value !== null) {
+                setJsonPreview(JSON.stringify(value, null, 2))
+                setJsonDrawerOpen(true)
+                return
+            }
+
+            if (typeof value === 'string') {
+                const parsed = JSON.parse(value)
+                setJsonPreview(JSON.stringify(parsed, null, 2))
+                setJsonDrawerOpen(true)
+            }
+        } catch {
+            // Not valid JSON; ignore click preview
+        }
+    }, [])
+
+    useEffect(() => {
+        if (typeof document === 'undefined') return
+
+        const root = document.documentElement
+        const updateTheme = () => setIsDarkMode(root.classList.contains('dark'))
+
+        updateTheme()
+
+        const observer = new MutationObserver(updateTheme)
+        observer.observe(root, { attributes: true, attributeFilter: ['class'] })
+
+        return () => observer.disconnect()
+    }, [])
 
     // If the user changes the db connect as they are in a table, reset state
     useEffect(() => {
@@ -426,14 +597,14 @@ export function DataTableView({ selectedTable }: DataTableViewProps): React.JSX.
             cell: ({ getValue, row }) => (
                 <EditableCell
                     value={getValue()}
-                    columnType={col.type}
+                    onJsonClick={openJsonPreview}
                     onSave={(newValue) => handleCellUpdate(row.index, col.name, newValue)}
                 />
             )
         }))
 
         setColumns([selectColumn, ...generatedColumns])
-    }, [columnSchema, handleCellUpdate, pageIndex, pageSize])
+    }, [columnSchema, handleCellUpdate, pageIndex, pageSize, openJsonPreview])
 
     // Reset pagination and selection when table changes
     useEffect(() => {
@@ -696,6 +867,36 @@ export function DataTableView({ selectedTable }: DataTableViewProps): React.JSX.
                     </Button>
                 </div>
             </div>
+
+            <Sheet open={jsonDrawerOpen} onOpenChange={setJsonDrawerOpen}>
+                <SheetContent side="right" className="w-[45vw] sm:max-w-[45vw] p-0">
+                    <SheetHeader className="border-b">
+                        <SheetTitle>JSON Preview</SheetTitle>
+                    </SheetHeader>
+                    <div className="h-full overflow-hidden p-4">
+                        <div className="h-full overflow-hidden rounded-md border bg-muted/20">
+                            <CodeMirror
+                                value={jsonPreview}
+                                onChange={(value) => setJsonPreview(value)}
+                                theme={isDarkMode ? appCodeMirrorDarkTheme : appCodeMirrorTheme}
+                                height="100%"
+                                basicSetup={{
+                                    lineNumbers: true,
+                                    foldGutter: true,
+                                    highlightActiveLine: true,
+                                    bracketMatching: true
+                                }}
+                                extensions={[
+                                    json(),
+                                    indentationMarkers(),
+                                    EditorView.lineWrapping,
+                                    syntaxHighlighting(appSyntaxHighlight)
+                                ]}
+                            />
+                        </div>
+                    </div>
+                </SheetContent>
+            </Sheet>
         </div>
     )
 }

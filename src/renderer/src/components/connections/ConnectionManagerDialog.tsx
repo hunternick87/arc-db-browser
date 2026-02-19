@@ -131,6 +131,8 @@ export function ConnectionManagerDialog({
                 return <HardDrive className="h-4 w-4" />
             case 'postgres':
                 return <Server className="h-4 w-4" />
+            case 'mssql':
+                return <Server className="h-4 w-4" />
             case 'valkey':
                 return <Key className="h-4 w-4" />
             default:
@@ -144,6 +146,8 @@ export function ConnectionManagerDialog({
                 return 'bg-blue-500/10 text-blue-500 border-blue-500/20'
             case 'postgres':
                 return 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20'
+            case 'mssql':
+                return 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20'
             case 'valkey':
                 return 'bg-red-500/10 text-red-500 border-red-500/20'
             default:
@@ -157,6 +161,9 @@ export function ConnectionManagerDialog({
         }
         if (conn.type === 'postgres') {
             return `${conn.host || 'localhost'}:${conn.port || 5432}/${conn.database || ''}`
+        }
+        if (conn.type === 'mssql') {
+            return `${conn.host || 'localhost'}:${conn.port || 1433}/${conn.database || ''}`
         }
         if (conn.type === 'valkey') {
             return `${conn.host || 'localhost'}:${conn.port || 6379}`
@@ -269,9 +276,9 @@ export function ConnectionManagerDialog({
                                                 <div className="p-2 rounded-md bg-muted">
                                                     {getConnectionIcon(conn.type)}
                                                 </div>
-                                                <div className="flex-1 min-w-0">
+                                                <div className="flex-1 min-w-0 w-0 overflow-hidden">
                                                     <div className="flex items-center gap-2">
-                                                        <span className="font-medium truncate">
+                                                        <span className="font-medium truncate" title={conn.name}>
                                                             {conn.name}
                                                         </span>
                                                         <Badge
@@ -281,7 +288,10 @@ export function ConnectionManagerDialog({
                                                             {conn.type}
                                                         </Badge>
                                                     </div>
-                                                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                                                    <p
+                                                        className="text-xs text-muted-foreground truncate mt-0.5 max-w-full"
+                                                        title={getConnectionDetails(conn)}
+                                                    >
                                                         {getConnectionDetails(conn)}
                                                     </p>
                                                 </div>

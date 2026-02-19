@@ -1,12 +1,14 @@
 import { ipcMain, dialog, app } from 'electron'
 import { SQLiteDriver } from './sqlite'
 import { PostgresDriver } from './postgres'
+import { MSSQLDriver } from './mssql'
 import { ValkeyDriver } from './valkey'
 import { getConnections, saveConnection, deleteConnection as deleteStoredConnection } from './connectionStore'
 import type {
   DatabaseConnection,
   SQLiteConnection,
   PostgresConnection,
+  MSSQLConnection,
   ValkeyConnection,
   SQLDriver,
   KeyValueDriver,
@@ -370,6 +372,19 @@ export function registerDatabaseHandlers(): void {
           })
           break
         }
+        case 'mssql': {
+          const msConn = connection as MSSQLConnection
+          driver = new MSSQLDriver({
+            host: msConn.host,
+            port: msConn.port,
+            database: msConn.database,
+            user: msConn.user,
+            password: msConn.password,
+            encrypt: msConn.encrypt,
+            trustServerCertificate: msConn.trustServerCertificate
+          })
+          break
+        }
         case 'valkey': {
           const valkeyConn = connection as ValkeyConnection
           driver = new ValkeyDriver({
@@ -427,6 +442,19 @@ export function registerDatabaseHandlers(): void {
             user: pgConn.user,
             password: pgConn.password,
             ssl: pgConn.ssl
+          })
+          break
+        }
+        case 'mssql': {
+          const msConn = connection as MSSQLConnection
+          driver = new MSSQLDriver({
+            host: msConn.host,
+            port: msConn.port,
+            database: msConn.database,
+            user: msConn.user,
+            password: msConn.password,
+            encrypt: msConn.encrypt,
+            trustServerCertificate: msConn.trustServerCertificate
           })
           break
         }

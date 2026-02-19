@@ -70,7 +70,8 @@ export function ContentArea({
                                     Data
                                 </TabsTrigger>
                                 {(activeConnection.connection.type === 'sqlite' ||
-                                    activeConnection.connection.type === 'postgres') && (
+                                    activeConnection.connection.type === 'postgres' ||
+                                    activeConnection.connection.type === 'mssql') && (
                                         <TabsTrigger value="query" className="data-[state=active]:bg-muted">
                                             <Terminal className="h-4 w-4 mr-2" />
                                             Query
@@ -91,7 +92,8 @@ export function ContentArea({
                         </TabsContent>
 
                         {(activeConnection.connection.type === 'sqlite' ||
-                            activeConnection.connection.type === 'postgres') && (
+                            activeConnection.connection.type === 'postgres' ||
+                            activeConnection.connection.type === 'mssql') && (
                                 <TabsContent value="query" className="flex-1 m-0 overflow-hidden">
                                     <QueryEditor />
                                 </TabsContent>

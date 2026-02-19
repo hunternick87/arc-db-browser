@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { SidebarProvider } from '@/components/ui/sidebar'
 import { AppSidebar } from '@/components/layout/AppSidebar'
 import { ContentArea } from '@/components/layout/ContentArea'
+import { TopBar } from '@/components/layout/TopBar'
 import { SchemaMigrationPage } from '@/components/schema/SchemaMigrationPage'
 import { ConnectionProvider } from '@/contexts/ConnectionContext'
 import type { TableInfo, KeyInfo } from '@/lib/types'
@@ -34,22 +35,25 @@ export default function MainLayout(): React.JSX.Element {
     return (
         <ConnectionProvider>
             <SidebarProvider>
-                <div className="flex h-screen w-screen overflow-hidden bg-background">
-                    <AppSidebar
-                        onTableSelect={handleTableSelect}
-                        onKeySelect={handleKeySelect}
-                        onOpenMigration={handleOpenMigration}
-                    />
-                    {activeView === 'main' ? (
-                        <ContentArea
-                            selectedTable={selectedTable}
-                            selectedKey={selectedKey}
+                <div className="flex h-screen w-screen flex-col overflow-hidden bg-background">
+                    <TopBar />
+                    <div className="flex min-h-0 flex-1 overflow-hidden">
+                        <AppSidebar
                             onTableSelect={handleTableSelect}
                             onKeySelect={handleKeySelect}
+                            onOpenMigration={handleOpenMigration}
                         />
-                    ) : (
-                        <SchemaMigrationPage onBack={handleCloseMigration} />
-                    )}
+                        {activeView === 'main' ? (
+                            <ContentArea
+                                selectedTable={selectedTable}
+                                selectedKey={selectedKey}
+                                onTableSelect={handleTableSelect}
+                                onKeySelect={handleKeySelect}
+                            />
+                        ) : (
+                            <SchemaMigrationPage onBack={handleCloseMigration} />
+                        )}
+                    </div>
                 </div>
             </SidebarProvider>
         </ConnectionProvider>
