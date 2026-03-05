@@ -761,6 +761,7 @@ export function DataTableView({ selectedTable }: DataTableViewProps): React.JSX.
                                 ))}
                                 {/* Insert Row */}
                                 <TableRow className="bg-muted/30 hover:bg-muted/50">
+                                    <TableHead className="p-1 w-[60px]" />
                                     {columnSchema.map((col) => (
                                         <TableHead key={`insert-${col.name}`} className="p-1">
                                             <Input

@@ -138,6 +138,13 @@ export function ConnectionProvider({ children }: { children: ReactNode }): React
 
         setIsLoading(true)
         try {
+            if (activeConnection.connection.type === 'sqlite') {
+                const reloadResult = await window.api.reloadSqlite(activeConnection.connection.id)
+                if (!reloadResult.success) {
+                    throw new Error(reloadResult.error || 'Failed to reload SQLite database from disk')
+                }
+            }
+
             const result = await window.api.getTables(activeConnection.connection.id)
             if (result.success) {
                 setActiveConnection(prev => prev ? { ...prev, tables: result.tables } : null)

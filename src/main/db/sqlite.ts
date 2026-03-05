@@ -15,6 +15,9 @@ async function getSqlJs(): Promise<typeof SQL> {
 export class SQLiteDriver implements SQLDriver {
   private db: SqlJsDatabase | null = null
   private filePath: string
+  private dirty = false
+  private lastKnownMtimeMs: number | null = null
+  private lastKnownSize: number | null = null
 
   constructor(filePath: string) {
     this.filePath = filePath
@@ -27,18 +30,26 @@ export class SQLiteDriver implements SQLDriver {
     if (fs.existsSync(this.filePath)) {
       const buffer = fs.readFileSync(this.filePath)
       this.db = new SqlJs.Database(buffer)
+      const stats = fs.statSync(this.filePath)
+      this.lastKnownMtimeMs = stats.mtimeMs
+      this.lastKnownSize = stats.size
     } else {
       // Create new database file
       this.db = new SqlJs.Database()
+      this.lastKnownMtimeMs = null
+      this.lastKnownSize = null
     }
+    this.dirty = false
   }
 
   async disconnect(): Promise<void> {
     if (this.db) {
-      // Save changes before closing
-      this.saveToFile()
+      if (this.dirty) {
+        this.saveToFile()
+      }
       this.db.close()
       this.db = null
+      this.dirty = false
     }
   }
 
@@ -54,6 +65,52 @@ export class SQLiteDriver implements SQLDriver {
     this.saveToFile()
   }
 
+  async forceReloadFromDisk(): Promise<void> {
+    if (!this.db) throw new Error('Not connected')
+    if (this.dirty) {
+      this.saveToFile()
+    }
+
+    const SqlJs = await getSqlJs()
+    if (!SqlJs) throw new Error('Failed to initialize SQL.js')
+
+    if (fs.existsSync(this.filePath)) {
+      const buffer = fs.readFileSync(this.filePath)
+      this.db.close()
+      this.db = new SqlJs.Database(buffer)
+      const stats = fs.statSync(this.filePath)
+      this.lastKnownMtimeMs = stats.mtimeMs
+      this.lastKnownSize = stats.size
+    } else {
+      this.db.close()
+      this.db = new SqlJs.Database()
+      this.lastKnownMtimeMs = null
+      this.lastKnownSize = null
+    }
+
+    this.dirty = false
+  }
+
+  private async reloadFromDiskIfChanged(): Promise<void> {
+    if (!this.db || this.dirty) return
+    if (!fs.existsSync(this.filePath)) return
+
+    const stats = fs.statSync(this.filePath)
+    const mtimeChanged = this.lastKnownMtimeMs === null || stats.mtimeMs !== this.lastKnownMtimeMs
+    const sizeChanged = this.lastKnownSize === null || stats.size !== this.lastKnownSize
+
+    if (!mtimeChanged && !sizeChanged) return
+
+    const SqlJs = await getSqlJs()
+    if (!SqlJs) throw new Error('Failed to initialize SQL.js')
+
+    const buffer = fs.readFileSync(this.filePath)
+    this.db.close()
+    this.db = new SqlJs.Database(buffer)
+    this.lastKnownMtimeMs = stats.mtimeMs
+    this.lastKnownSize = stats.size
+  }
+
   private saveToFile(): void {
     if (this.db) {
       const data = this.db.export()
@@ -63,11 +120,16 @@ export class SQLiteDriver implements SQLDriver {
         fs.mkdirSync(dir, { recursive: true })
       }
       fs.writeFileSync(this.filePath, buffer)
+      const stats = fs.statSync(this.filePath)
+      this.lastKnownMtimeMs = stats.mtimeMs
+      this.lastKnownSize = stats.size
+      this.dirty = false
     }
   }
 
   async getTables(): Promise<TableInfo[]> {
     if (!this.db) throw new Error('Not connected')
+    await this.reloadFromDiskIfChanged()
 
     const result = this.db.exec(`
       SELECT name, type 
@@ -87,6 +149,7 @@ export class SQLiteDriver implements SQLDriver {
 
   async getTableData(table: string, limit = 100, offset = 0): Promise<QueryResult> {
     if (!this.db) throw new Error('Not connected')
+    await this.reloadFromDiskIfChanged()
 
     const startTime = performance.now()
     
@@ -129,6 +192,7 @@ export class SQLiteDriver implements SQLDriver {
 
   async getTableSchema(table: string): Promise<QueryColumn[]> {
     if (!this.db) throw new Error('Not connected')
+    await this.reloadFromDiskIfChanged()
 
     const safeName = table.replace(/[^a-zA-Z0-9_]/g, '')
     const result = this.db.exec(`PRAGMA table_info("${safeName}")`)
@@ -144,13 +208,17 @@ export class SQLiteDriver implements SQLDriver {
   async executeQuery(sql: string): Promise<QueryResult> {
     if (!this.db) throw new Error('Not connected')
 
+    const isModification = /^\s*(INSERT|UPDATE|DELETE|CREATE|DROP|ALTER|REPLACE|VACUUM)/i.test(sql)
+    if (!isModification) {
+      await this.reloadFromDiskIfChanged()
+    }
+
     const startTime = performance.now()
     const result = this.db.exec(sql)
     const executionTime = performance.now() - startTime
 
-    // Check if it's a modification query
-    const isModification = /^\s*(INSERT|UPDATE|DELETE|CREATE|DROP|ALTER)/i.test(sql)
     if (isModification) {
+      this.dirty = true
       this.saveToFile()
     }
 
@@ -192,6 +260,7 @@ export class SQLiteDriver implements SQLDriver {
         this.db.exec(stmt)
       }
       this.db.exec('COMMIT')
+      this.dirty = true
       this.saveToFile()
     } catch (error) {
       try {

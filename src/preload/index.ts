@@ -39,6 +39,9 @@ const databaseAPI = {
   // SQL operations
   getTables: (connectionId: string): Promise<{ success: boolean; tables?: TableInfo[]; error?: string }> =>
     ipcRenderer.invoke('db:get-tables', connectionId),
+
+  reloadSqlite: (connectionId: string): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('db:reload-sqlite', connectionId),
   
   getTableData: (
     connectionId: string,

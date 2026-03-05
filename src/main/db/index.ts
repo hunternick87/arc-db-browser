@@ -60,6 +60,30 @@ function quoteIdent(name: string): string {
   return `"${String(name).replace(/\"/g, '"').replace(/"/g, '""')}"`
 }
 
+function toSqlLiteral(value: unknown): string {
+  if (value === null || value === undefined) {
+    return 'NULL'
+  }
+
+  if (typeof value === 'string') {
+    return `'${value.replace(/'/g, "''")}'`
+  }
+
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? String(value) : 'NULL'
+  }
+
+  if (typeof value === 'boolean') {
+    return value ? 'TRUE' : 'FALSE'
+  }
+
+  if (value instanceof Date) {
+    return `'${value.toISOString().replace(/'/g, "''")}'`
+  }
+
+  return `'${JSON.stringify(value).replace(/'/g, "''")}'`
+}
+
 function normalizeType(t?: string): string {
   return (t || 'TEXT').toUpperCase().trim()
 }
@@ -491,6 +515,23 @@ export function registerDatabaseHandlers(): void {
     }
   })
 
+  ipcMain.handle('db:reload-sqlite', async (_event, connectionId: string) => {
+    try {
+      const driver = connections.get(connectionId)
+      if (!driver) {
+        return { success: false, error: `Connection ${connectionId} not found` }
+      }
+      if (!(driver instanceof SQLiteDriver)) {
+        return { success: false, error: 'Connection is not SQLite' }
+      }
+
+      await driver.forceReloadFromDisk()
+      return { success: true }
+    } catch (error) {
+      return { success: false, error: (error as Error).message }
+    }
+  })
+
   // Get table data
   ipcMain.handle('db:get-table-data', async (
     _event,
@@ -582,27 +623,16 @@ export function registerDatabaseHandlers(): void {
       const driver = getSQLDriver(connectionId)
       const columns = Object.keys(row)
       const values = Object.values(row)
-      const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ')
-      
-      // Build INSERT query
-      const sql = `INSERT INTO "${table}" (${columns.map(c => `"${c}"`).join(', ')}) VALUES (${placeholders})`
-      
-      // For SQLite, we need to use ? placeholders
-      const sqliteSql = `INSERT INTO "${table}" (${columns.map(c => `"${c}"`).join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`
-      
-      // Execute using raw query with bound parameters
-      const result = await driver.executeQuery(
-        driver.constructor.name === 'SQLiteDriver' 
-          ? sqliteSql.replace(/\?/g, (_, i) => JSON.stringify(values[i] ?? null))
-          : sql.replace(/\$\d+/g, (match) => {
-              const idx = parseInt(match.slice(1)) - 1
-              const val = values[idx]
-              if (val === null || val === undefined) return 'NULL'
-              if (typeof val === 'string') return `'${val.replace(/'/g, "''")}'`
-              if (typeof val === 'number') return String(val)
-              return `'${JSON.stringify(val).replace(/'/g, "''")}'`
-            })
-      )
+
+      if (columns.length === 0) {
+        throw new Error('Cannot insert an empty row payload')
+      }
+
+      const sql = `INSERT INTO ${quoteIdent(table)} (${columns.map(quoteIdent).join(', ')}) VALUES (${values
+        .map((value) => toSqlLiteral(value))
+        .join(', ')})`
+
+      const result = await driver.executeQuery(sql)
       
       return { success: true, result }
     } catch (error) {

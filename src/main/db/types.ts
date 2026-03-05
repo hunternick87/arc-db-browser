@@ -158,6 +158,7 @@ export const IPC_CHANNELS = {
   GET_TABLE_DATA: 'db:get-table-data',
   GET_TABLE_SCHEMA: 'db:get-table-schema',
   EXECUTE_QUERY: 'db:execute-query',
+  RELOAD_SQLITE: 'db:reload-sqlite',
   
   // Key-value operations
   SCAN_KEYS: 'db:scan-keys',

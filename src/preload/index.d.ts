@@ -19,6 +19,7 @@ interface DatabaseAPI {
   disconnect: (connectionId: string) => Promise<{ success: boolean; error?: string }>
   testConnection: (connection: DatabaseConnection) => Promise<{ success: boolean; error?: string }>
   getTables: (connectionId: string) => Promise<{ success: boolean; tables?: TableInfo[]; error?: string }>
+  reloadSqlite: (connectionId: string) => Promise<{ success: boolean; error?: string }>
   getTableData: (
     connectionId: string,
     table: string,
