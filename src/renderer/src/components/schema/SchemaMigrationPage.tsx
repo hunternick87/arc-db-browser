@@ -40,7 +40,7 @@ import {
 } from 'lucide-react'
 
 interface SchemaMigrationPageProps {
-    onBack: () => void
+    onBack?: () => void
 }
 
 type ConnectionStatus = 'idle' | 'testing' | 'connected' | 'error'
@@ -481,11 +481,15 @@ export function SchemaMigrationPage({ onBack }: SchemaMigrationPageProps): React
                 <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-4">
                     <SidebarTrigger className="-ml-1" />
                     <Separator orientation="vertical" className="h-6" />
-                    <Button variant="ghost" size="sm" onClick={onBack} className="gap-2">
-                        <ArrowLeft className="h-4 w-4" />
-                        Back
-                    </Button>
-                    <Separator orientation="vertical" className="h-6" />
+                    {onBack && (
+                        <>
+                            <Button variant="ghost" size="sm" onClick={onBack} className="gap-2">
+                                <ArrowLeft className="h-4 w-4" />
+                                Back
+                            </Button>
+                            <Separator orientation="vertical" className="h-6" />
+                        </>
+                    )}
                     <div className="flex items-center gap-2 flex-1">
                         <Database className="h-4 w-4 text-primary" />
                         <span className="text-sm font-medium">Schema Migration</span>

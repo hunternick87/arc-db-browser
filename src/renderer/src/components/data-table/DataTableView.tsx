@@ -722,7 +722,7 @@ export function DataTableView({ selectedTable }: DataTableViewProps): React.JSX.
             )}
 
             {/* Table */}
-            <ScrollArea className="flex-1 w-full overflow-auto">
+            <ScrollArea className="min-h-0 flex-1 w-full">
                 {isLoading ? (
                     <div className="p-4 space-y-2">
                         {Array.from({ length: 10 }).map((_, i) => (

@@ -3,6 +3,7 @@ import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { registerDatabaseHandlers } from './db'
+import { registerGitHubHandlers } from './github'
 import { initAutoUpdater } from './updater'
 
 function createWindow(): BrowserWindow {
@@ -89,6 +90,7 @@ app.whenReady().then(() => {
 
   // Register database IPC handlers
   registerDatabaseHandlers()
+  registerGitHubHandlers()
 
   const mainWindow = createWindow()
   initAutoUpdater(mainWindow)

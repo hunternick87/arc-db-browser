@@ -1,18 +1,27 @@
 import { useState } from 'react'
 import { SidebarProvider } from '@/components/ui/sidebar'
-import { AppSidebar } from '@/components/layout/AppSidebar'
-import { ContentArea } from '@/components/layout/ContentArea'
 import { TopBar } from '@/components/layout/TopBar'
 import { SchemaMigrationPage } from '@/components/schema/SchemaMigrationPage'
+import { ToolRail, type ToolkitMode } from '@/components/layout/ToolRail'
+import { ToolkitWorkbench } from '@/components/layout/ToolkitWorkbench'
+import { DatabaseWorkbench } from '@/components/layout/DatabaseWorkbench'
+import { GitHubWorkbench } from '@/components/github/GitHubWorkbench'
 import { ConnectionProvider } from '@/contexts/ConnectionContext'
 import type { TableInfo, KeyInfo } from '@/lib/types'
 
-type ActiveView = 'main' | 'schema-migration'
+const TOOLBAR_TITLES: Record<ToolkitMode, string> = {
+    database: 'Arc Dev Toolkit - Database',
+    github: 'Arc Dev Toolkit - GitHub',
+    migration: 'Arc Dev Toolkit - Schema Migration',
+    json: 'Arc Dev Toolkit - JSON Lab',
+    api: 'Arc Dev Toolkit - API Console',
+    terminal: 'Arc Dev Toolkit - Task Runner'
+}
 
 export default function MainLayout(): React.JSX.Element {
     const [selectedTable, setSelectedTable] = useState<TableInfo | null>(null)
     const [selectedKey, setSelectedKey] = useState<KeyInfo | null>(null)
-    const [activeView, setActiveView] = useState<ActiveView>('main')
+    const [activeMode, setActiveMode] = useState<ToolkitMode>('database')
 
     const handleTableSelect = (table: TableInfo) => {
         setSelectedTable(table)
@@ -24,34 +33,29 @@ export default function MainLayout(): React.JSX.Element {
         setSelectedTable(null)
     }
 
-    const handleOpenMigration = () => {
-        setActiveView('schema-migration')
-    }
-
-    const handleCloseMigration = () => {
-        setActiveView('main')
-    }
-
     return (
         <ConnectionProvider>
-            <SidebarProvider>
+            <SidebarProvider style={{ '--sidebar-width': '16rem' } as React.CSSProperties}>
                 <div className="flex h-screen w-screen flex-col overflow-hidden bg-background">
-                    <TopBar />
+                    <TopBar title={TOOLBAR_TITLES[activeMode]} />
                     <div className="flex min-h-0 flex-1 overflow-hidden">
-                        <AppSidebar
-                            onTableSelect={handleTableSelect}
-                            onKeySelect={handleKeySelect}
-                            onOpenMigration={handleOpenMigration}
-                        />
-                        {activeView === 'main' ? (
-                            <ContentArea
+                        <ToolRail activeMode={activeMode} onModeChange={setActiveMode} />
+
+                        {activeMode === 'database' && (
+                            <DatabaseWorkbench
                                 selectedTable={selectedTable}
                                 selectedKey={selectedKey}
                                 onTableSelect={handleTableSelect}
                                 onKeySelect={handleKeySelect}
                             />
-                        ) : (
-                            <SchemaMigrationPage onBack={handleCloseMigration} />
+                        )}
+
+                        {activeMode === 'github' && <GitHubWorkbench />}
+
+                        {activeMode === 'migration' && <SchemaMigrationPage />}
+
+                        {(activeMode === 'json' || activeMode === 'api' || activeMode === 'terminal') && (
+                            <ToolkitWorkbench mode={activeMode} />
                         )}
                     </div>
                 </div>

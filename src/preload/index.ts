@@ -14,6 +14,12 @@ import type {
   BackupListResponse,
   RestoreSqliteBackupResponse
 } from '../main/db/types'
+import type {
+  CreatePullRequestRequest,
+  GitHubActionResponse,
+  GitHubStatusResponse,
+  PushRequest
+} from '../main/github/types'
 
 type UpdaterEvent =
   | { type: 'status'; message: string }
@@ -162,6 +168,46 @@ const windowControlsAPI = {
   close: (): Promise<void> => ipcRenderer.invoke('window:close')
 }
 
+const githubAPI = {
+  pickRepoDirectory: (): Promise<{ success: boolean; path?: string; canceled?: boolean }> =>
+    ipcRenderer.invoke('github:pick-repo-dir'),
+
+  getStatus: (repoPath: string): Promise<GitHubStatusResponse> =>
+    ipcRenderer.invoke('github:status', repoPath),
+
+  fetch: (repoPath: string): Promise<GitHubActionResponse> =>
+    ipcRenderer.invoke('github:fetch', repoPath),
+
+  pull: (repoPath: string, rebase = true): Promise<GitHubActionResponse> =>
+    ipcRenderer.invoke('github:pull', repoPath, rebase),
+
+  push: (repoPath: string, req?: PushRequest): Promise<GitHubActionResponse> =>
+    ipcRenderer.invoke('github:push', repoPath, req),
+
+  sync: (repoPath: string): Promise<GitHubActionResponse> =>
+    ipcRenderer.invoke('github:sync', repoPath),
+
+  createBranch: (repoPath: string, branchName: string, fromBranch?: string): Promise<GitHubActionResponse> =>
+    ipcRenderer.invoke('github:create-branch', repoPath, branchName, fromBranch),
+
+  createPullRequest: (
+    repoPath: string,
+    req: CreatePullRequestRequest
+  ): Promise<GitHubActionResponse> => ipcRenderer.invoke('github:create-pr', repoPath, req),
+
+  stageFiles: (repoPath: string, files: string[]): Promise<GitHubActionResponse> =>
+    ipcRenderer.invoke('github:stage-files', repoPath, files),
+
+  unstageFiles: (repoPath: string, files: string[]): Promise<GitHubActionResponse> =>
+    ipcRenderer.invoke('github:unstage-files', repoPath, files),
+
+  commit: (repoPath: string, message: string): Promise<GitHubActionResponse> =>
+    ipcRenderer.invoke('github:commit', repoPath, message),
+
+  getDiff: (repoPath: string, filePath: string, staged: boolean): Promise<GitHubActionResponse> =>
+    ipcRenderer.invoke('github:get-diff', repoPath, filePath, staged)
+}
+
 // Use `contextBridge` APIs to expose Electron APIs to
 // renderer only if context isolation is enabled, otherwise
 // just add to the DOM global.
@@ -171,6 +217,7 @@ if (process.contextIsolated) {
     contextBridge.exposeInMainWorld('api', databaseAPI)
     contextBridge.exposeInMainWorld('updater', updaterAPI)
     contextBridge.exposeInMainWorld('windowControls', windowControlsAPI)
+    contextBridge.exposeInMainWorld('github', githubAPI)
   } catch (error) {
     console.error(error)
   }
@@ -183,4 +230,6 @@ if (process.contextIsolated) {
   window.updater = updaterAPI
   // @ts-ignore (define in dts)
   window.windowControls = windowControlsAPI
+  // @ts-ignore (define in dts)
+  window.github = githubAPI
 }

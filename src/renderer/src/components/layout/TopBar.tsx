@@ -2,7 +2,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Maximize2, Minimize2, Minus, X } from 'lucide-react'
 
-export function TopBar(): React.JSX.Element {
+interface TopBarProps {
+    title?: string
+}
+
+export function TopBar({ title = 'Arc Dev Toolkit' }: TopBarProps): React.JSX.Element {
     const [isMaximized, setIsMaximized] = useState(false)
 
     const refreshMaximizedState = useCallback(async () => {
@@ -33,7 +37,7 @@ export function TopBar(): React.JSX.Element {
             onDoubleClick={handleToggleMaximize}
             style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
         >
-            <div className="px-2 text-sm font-medium text-foreground">Arc DB Browser</div>
+            <div className="px-2 text-sm font-medium text-foreground">{title}</div>
             <div className="flex items-center gap-1" style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}>
                 <Button
                     variant="ghost"

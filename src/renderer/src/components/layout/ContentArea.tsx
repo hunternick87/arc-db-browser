@@ -1,5 +1,4 @@
-import { SidebarInset, SidebarTrigger } from '@/components/ui/sidebar'
-import { Separator } from '@/components/ui/separator'
+import { SidebarInset } from '@/components/ui/sidebar'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useConnection } from '@/contexts/ConnectionContext'
 import { DataTableView } from '@/components/data-table/DataTableView'
@@ -14,12 +13,14 @@ interface ContentAreaProps {
     selectedKey: KeyInfo | null
     onTableSelect: (table: TableInfo) => void
     onKeySelect: (key: KeyInfo) => void
+    showHeader?: boolean
 }
 
 export function ContentArea({
     selectedTable,
     selectedKey,
-    onTableSelect
+    onTableSelect,
+    showHeader = true
 }: ContentAreaProps): React.JSX.Element {
     const { activeConnection } = useConnection()
     const [activeTab, setActiveTab] = useState('data')
@@ -33,19 +34,18 @@ export function ContentArea({
 
     return (
         <SidebarInset className="flex flex-col flex-1 overflow-hidden min-w-0">
-            {/* Header */}
-            <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-4">
-                <SidebarTrigger className="-ml-1" />
-                <Separator orientation="vertical" className="h-6" />
-                <div className="flex items-center gap-2 flex-1">
-                    <Database className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">
-                        {activeConnection
-                            ? activeConnection.connection.name
-                            : 'No connection selected'}
-                    </span>
-                </div>
-            </header>
+            {showHeader && (
+                <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border px-4">
+                    <div className="flex items-center gap-2 flex-1">
+                        <Database className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm font-medium">
+                            {activeConnection
+                                ? activeConnection.connection.name
+                                : 'No connection selected'}
+                        </span>
+                    </div>
+                </header>
+            )}
 
             {/* Main Content */}
             <div className="flex-1 overflow-hidden min-w-0">

@@ -13,6 +13,12 @@ import type {
   BackupListResponse,
   RestoreSqliteBackupResponse
 } from '../main/db/types'
+import type {
+  CreatePullRequestRequest,
+  GitHubActionResponse,
+  GitHubStatusResponse,
+  PushRequest
+} from '../main/github/types'
 
 interface DatabaseAPI {
   connect: (connection: DatabaseConnection) => Promise<{ success: boolean; connectionId?: string; error?: string }>
@@ -109,11 +115,27 @@ interface WindowControlsAPI {
   close: () => Promise<void>
 }
 
+interface GitHubAPI {
+  pickRepoDirectory: () => Promise<{ success: boolean; path?: string; canceled?: boolean }>
+  getStatus: (repoPath: string) => Promise<GitHubStatusResponse>
+  fetch: (repoPath: string) => Promise<GitHubActionResponse>
+  pull: (repoPath: string, rebase?: boolean) => Promise<GitHubActionResponse>
+  push: (repoPath: string, req?: PushRequest) => Promise<GitHubActionResponse>
+  sync: (repoPath: string) => Promise<GitHubActionResponse>
+  createBranch: (repoPath: string, branchName: string, fromBranch?: string) => Promise<GitHubActionResponse>
+  createPullRequest: (repoPath: string, req: CreatePullRequestRequest) => Promise<GitHubActionResponse>
+  stageFiles: (repoPath: string, files: string[]) => Promise<GitHubActionResponse>
+  unstageFiles: (repoPath: string, files: string[]) => Promise<GitHubActionResponse>
+  commit: (repoPath: string, message: string) => Promise<GitHubActionResponse>
+  getDiff: (repoPath: string, filePath: string, staged: boolean) => Promise<GitHubActionResponse>
+}
+
 declare global {
   interface Window {
     electron: ElectronAPI
     api: DatabaseAPI
     updater: UpdaterAPI
     windowControls: WindowControlsAPI
+    github: GitHubAPI
   }
 }
